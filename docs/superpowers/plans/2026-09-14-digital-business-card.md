@@ -116,7 +116,7 @@ white fill must become `#025172`. The square site icon needs no recolor.
 
 ```python
 # tests/test_assets.py
-import re, subprocess, sys
+import subprocess, sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -125,26 +125,27 @@ URL = "https://dhruvbangera.github.io"
 
 
 def build():
-    subprocess.run([str(ROOT / "build/.venv/bin/python"), str(ROOT / "build/build.py")],
-                   check=True, cwd=ROOT)
+    subprocess.run([sys.executable, str(ROOT / "build/build.py")], check=True, cwd=ROOT)
+
+
+# Build ONCE for the module. Calling it per-test made 8 HTTP requests per run and
+# made the QR test fail with a urllib traceback whenever Parker's CDN was down —
+# even though the QR assertion needs nothing but local segno.
+build()
 
 
 def test_wordmark_recolored_for_white_background():
-    build()
     svg = (ASSETS / "parker-wordmark.svg").read_text()
     assert "#025172" in svg, "wordmark must use Parker deep teal"
-    assert "fill:#fff" not in svg.replace(" ", ""), "white fill would be invisible on a white card"
 
 
 def test_wordmark_preserves_accent_colors():
-    build()
     svg = (ASSETS / "parker-wordmark.svg").read_text()
     assert "#6697a9" in svg, "slate accent must survive recolor"
     assert "#e3d71d" in svg, "yellow accent must survive recolor"
 
 
 def test_square_mark_is_untouched_and_square():
-    build()
     svg = (ASSETS / "parker-mark.svg").read_text()
     assert 'viewBox="0 0 500 500"' in svg, "mark must stay square for circular contact-photo crop"
     assert "#025172" in svg
@@ -154,7 +155,6 @@ def test_qr_decodes_to_exact_url():
     """The single most important test in this repo.
     A QR that scans to the wrong place is worse than no QR."""
     import cv2
-    build()
     png = ASSETS / "qr-check.png"
     got, _, _ = cv2.QRCodeDetector().detectAndDecode(cv2.imread(str(png)))
     assert got == URL, f"QR decoded to {got!r}, expected {URL!r}"
@@ -198,18 +198,26 @@ def main() -> None:
 
     # Wordmark: published reversed (white). Recolor white -> Parker teal for a white card.
     # Accents #6697a9 and #e3d71d are intentionally left alone.
-    wordmark = fetch(WORDMARK_SRC).replace("fill:#fff;", f"fill:{PT_TEAL};")
-    assert "fill:#fff" not in wordmark.replace(" ", ""), "recolor failed; upstream SVG changed"
+    # Positive check: asserting the ABSENCE of the old value after replacing it
+    # cannot tell "replaced" from "that spelling was never there" — so a Parker
+    # change to fill:#FFF; or fill:white; would silently ship a white-on-white logo.
+    src = fetch(WORDMARK_SRC)
+    assert src.count("fill:#fff;") == 1, "recolor failed; upstream SVG changed"
+    wordmark = src.replace("fill:#fff;", f"fill:{PT_TEAL};")
     (ASSETS / "parker-wordmark.svg").write_text(wordmark)
 
     # Square mark: already light-background colors. Used for apple-touch-icon + vCard PHOTO.
     (ASSETS / "parker-mark.svg").write_text(fetch(MARK_SRC))
 
     # QR, error correction H for glare/screen margin.
+    # border=4 is the spec-required quiet zone. VERIFIED: border=0 does not decode
+    # at all. Shared opts so the shipped SVG and the tested PNG cannot drift in the
+    # one dimension that decides whether the thing scans.
     qr = segno.make(URL, error="h")
-    qr.save(ASSETS / "qr.svg", kind="svg", scale=10, dark=PT_TEAL, light=None, border=0)
+    qr_opts = dict(scale=10, dark=PT_TEAL, border=4)
+    qr.save(ASSETS / "qr.svg", kind="svg", light=None, **qr_opts)
     # PNG twin exists purely so tests can decode it.
-    qr.save(ASSETS / "qr-check.png", scale=10, dark=PT_TEAL, light="#ffffff", border=3)
+    qr.save(ASSETS / "qr-check.png", light="#ffffff", **qr_opts)
 
     print(f"assets written to {ASSETS}")
 
@@ -285,8 +293,10 @@ def test_no_phone_number_anywhere():
 
 
 def test_crlf_line_endings():
-    """RFC 6350 requires CRLF. Some iOS versions reject LF-only vCards."""
-    assert b"\r\n" in VCF.read_bytes()
+    """RFC 6350 requires CRLF. Some iOS versions reject LF-only vCards.
+    Checks no BARE LF exists — `b"\r\n" in data` would pass on one CRLF + nine LFs."""
+    data = VCF.read_bytes()
+    assert data.replace(b"\r\n", b"").count(b"\n") == 0, "bare LF found"
 ```
 
 - [ ] **Step 2: Run it and watch it fail**
@@ -311,7 +321,7 @@ lines = [
     "TITLE:AI Engineer",
     "EMAIL;type=INTERNET;type=WORK;type=pref:dhruv.bangera@parkertechnology.com",
     "URL;type=WORK:https://dhruvbangera.github.io",
-    "X-SOCIALPROFILE;type=linkedin:https://www.linkedin.com/in/dhruvbangera",
+    "X-SOCIALPROFILE;type=linkedin;x-user=dhruvbangera:https://www.linkedin.com/in/dhruvbangera",
     "END:VCARD",
 ]
 Path("site/dhruv.vcf").write_bytes(("\r\n".join(lines) + "\r\n").encode("utf-8"))
@@ -507,6 +517,7 @@ Expected: FAIL — `site/index.html` does not exist.
 <title>Dhruv Bangera — AI Engineer, Parker Technology</title>
 <meta name="description" content="Dhruv Bangera, AI Engineer at Parker Technology.">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Dhruv Bangera">
 <meta name="theme-color" content="#ffffff">
@@ -526,6 +537,7 @@ Expected: FAIL — `site/index.html` does not exist.
   .action__icon { width:1.75rem; height:1.75rem; flex:0 0 auto; display:grid;
                   place-items:center; border-radius:.5rem; background:var(--pt-teal);
                   color:#fff; font-size:.9rem; font-weight:600; }
+  .action__icon svg { width:1.05rem; height:1.05rem; display:block; }
   .action__icon--li { background:#0a66c2; }
   .action__icon--save { background:var(--pt-slate); }
   .action__chev { margin-left:auto; color:#b9c0c5; }
@@ -555,12 +567,12 @@ Expected: FAIL — `site/index.html` does not exist.
 
     <nav class="actions">
       <a class="action" href="dhruv.vcf">
-        <span class="action__icon action__icon--save">&#9679;</span>
+        <span class="action__icon action__icon--save"><svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><circle cx="8" cy="5.1" r="2.7"/><path d="M8 9.3c-2.8 0-5 1.7-5 3.8 0 .5.4.9.9.9h8.2c.5 0 .9-.4.9-.9 0-2.1-2.2-3.8-5-3.8z"/></svg></span>
         Save to Contacts
         <span class="action__chev">&rsaquo;</span>
       </a>
       <a class="action" href="mailto:dhruv.bangera@parkertechnology.com">
-        <span class="action__icon">&#9993;</span>
+        <span class="action__icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="1.9" y="3.6" width="12.2" height="8.8" rx="1.7"/><path d="M2.6 4.8 8 8.9l5.4-4.1"/></svg></span>
         Email me
         <span class="action__chev">&rsaquo;</span>
       </a>
@@ -589,6 +601,14 @@ Expected: FAIL — `site/index.html` does not exist.
 </body>
 </html>
 ```
+
+**On the icons:** these are inline SVG, not dingbat characters. `&#9679;` and `&#9993;`
+render inconsistently across platforms — the circle reads as a meaningless blob and the
+envelope as a cramped box — which undercuts the native-Apple feel. Verified visually in a
+browser. Do not "simplify" these back to glyphs.
+
+**On the meta tags:** `apple-mobile-web-app-capable` is deprecated and browsers warn about
+it, but Apple still honours it, so BOTH it and the standard `mobile-web-app-capable` ship.
 
 - [ ] **Step 4: Write the manifest**
 
@@ -632,51 +652,169 @@ iOS crops contact photos to a circle.
 **Files:**
 - Create: `site/assets/icon-180.png`; Modify: `site/dhruv.vcf`; Modify: `tests/test_vcard.py`
 
-- [ ] **Step 1: Render the icon with the Playwright MCP**
+- [ ] **Step 1: Start a local server**
 
-Write `/tmp/icon.html`:
+**The Playwright MCP blocks the `file:` protocol** — verified, it errors with
+"Access to file: protocol is blocked". Everything must be served over HTTP.
+
+```bash
+cd /Users/dhruvbangera/Desktop/Digital_Business_Card
+python3 -m http.server 8137 --bind 127.0.0.1 &
+sleep 1 && curl -s -o /dev/null -w 'server: %{http_code}\n' http://localhost:8137/site/index.html
+```
+
+- [ ] **Step 2: Render the icon with the Playwright MCP**
+
+Write `out/icon.html` (`out/` is gitignored, so harnesses never pollute the repo):
 
 ```html
 <!doctype html><meta charset="utf-8">
-<style>html,body{margin:0;width:180px;height:180px;background:#fff;}
-img{width:180px;height:180px;display:block;}</style>
-<img src="PARKER_MARK_ABS_PATH">
+<style>
+ html,body{margin:0;width:180px;height:180px;background:#fff;
+           display:grid;place-items:center;overflow:hidden;}
+ /* 140 of 180 leaves ~22% breathing room so iOS's circular contact-photo crop
+    and squircle home-screen mask never clip the mark's corner elements. */
+ img{width:140px;height:140px;display:block;}
+</style>
+<img src="../site/assets/parker-mark.svg">
 ```
 
-Replace `PARKER_MARK_ABS_PATH` with the absolute `file://` path to
-`site/assets/parker-mark.svg`. Then, using the Playwright MCP:
-`browser_resize` to 180×180 → `browser_navigate` to the file URL →
-`browser_take_screenshot` saving to `site/assets/icon-180.png`.
+Use `scale: "css"` on the screenshot — the canvas is already sized in real pixels.
 
-- [ ] **Step 2: Verify dimensions**
+Then, using the Playwright MCP:
+`browser_resize` to 180×180 → `browser_navigate` to
+`http://localhost:8137/out/icon.html` → `browser_take_screenshot` with
+`filename` set to the **absolute** path
+`/Users/dhruvbangera/Desktop/Digital_Business_Card/site/assets/icon-180.png`.
+
+**The filename must be absolute.** A relative path resolves against the browser's own
+working directory — it lands in the repo root, not where you intend. Verified the hard
+way: it left a stray PNG at the repo root.
+
+- [ ] **Step 3: Verify dimensions**
+
+Pillow is **not** in the venv (it exists only in system Python), so use `cv2`, which
+is already a dependency:
 
 ```bash
 build/.venv/bin/python -c "
-from PIL import Image; im=Image.open('site/assets/icon-180.png'); print(im.size, im.mode)
-assert im.size==(180,180), im.size; print('OK')"
+import cv2, os
+im = cv2.imread('site/assets/icon-180.png', cv2.IMREAD_UNCHANGED)
+h, w = im.shape[:2]
+print(f'size: {w}x{h}  bytes: {os.path.getsize(\"site/assets/icon-180.png\")}')
+assert (w, h) == (180, 180), (w, h)
+print('OK')"
 ```
 
-Expected: `(180, 180) RGBA` then `OK`
+Expected: `size: 180x180  bytes: ~1900` then `OK`
 
-- [ ] **Step 3: Add the failing PHOTO test**
+- [ ] **Step 4: Add the failing PHOTO test**
 
-Append to `tests/test_vcard.py`:
+**Rewrite** `tests/test_vcard.py` to the content below — this is a rewrite, not an
+append, because folding changes how the whole file must read the card.
+
+Folding splits long values across lines, so `"linkedin.com/in/dhruvbangera"` no longer
+appears as a contiguous string. An append-only version of this step leaves the single-b
+regression guard passing vacuously while no longer able to detect the typo. Likewise
+`"TEL" in text` can match by chance inside the base64 photo and fail for an unrelated
+reason. Both are fixed by reading unfolded property lines.
 
 ```python
+# tests/test_vcard.py
+from pathlib import Path
+
+VCF = Path(__file__).resolve().parents[1] / "site" / "dhruv.vcf"
+
+
+def unfolded() -> str:
+    """The vCard as a consumer sees it.
+
+    RFC 6350 folds long lines as CRLF + a single space, and readers rejoin them
+    before interpreting. Asserting against the raw bytes tests the wire format,
+    not the content — and silently breaks once a value crosses 75 octets.
+    """
+    return VCF.read_bytes().decode().replace("\r\n ", "")
+
+
+def properties() -> list[str]:
+    """Unfolded property lines, so a substring can't be matched inside base64."""
+    return [l for l in unfolded().split("\r\n") if l]
+
+
+def test_uses_vcard_3_for_ios_compatibility():
+    assert "VERSION:3.0" in properties()
+
+
+def test_required_identity_fields():
+    p = properties()
+    assert "FN:Dhruv Bangera" in p
+    assert "N:Bangera;Dhruv;;;" in p
+    assert "TITLE:AI Engineer" in p
+    assert "ORG:Parker Technology" in p
+
+
+def test_email_present():
+    assert any(
+        l.startswith("EMAIL") and l.endswith("dhruv.bangera@parkertechnology.com")
+        for l in properties()
+    )
+
+
+def test_linkedin_uses_single_b():
+    """Regression guard. Dhruv corrected dhruvbbangera -> dhruvbangera on 2026-09-14.
+    LinkedIn returns 999 for both spellings, so no network check can catch this —
+    only this assertion can.
+
+    Must read the UNFOLDED card: folding splits this URL mid-string, which made an
+    earlier version of this test silently stop matching.
+    """
+    t = unfolded()
+    assert "linkedin.com/in/dhruvbangera" in t
+    assert "dhruvbbangera" not in t, "double-b typo has regressed"
+
+
+def test_no_phone_number_anywhere():
+    """Explicit product decision: no phone. A QR in the wild cannot be retracted.
+
+    Checks property NAMES, not raw text — 'TEL' can occur by chance inside the
+    base64 photo, which would fail this test for an entirely unrelated reason.
+    """
+    offenders = [l for l in properties() if l.upper().startswith("TEL")]
+    assert not offenders, f"phone number present: {offenders}"
+
+
+def test_crlf_line_endings():
+    """RFC 6350 requires CRLF. Some iOS versions reject LF-only vCards.
+    Checks no BARE LF exists — `b"\\r\\n" in data` would pass on one CRLF + nine LFs."""
+    data = VCF.read_bytes()
+    assert data.replace(b"\r\n", b"").count(b"\n") == 0, "bare LF found"
+
+
 def test_photo_embedded_as_base64_png():
     """Parker mark appears as the contact photo in iOS Contacts."""
-    t = VCF.read_text()
-    assert "PHOTO;ENCODING=b;TYPE=PNG:" in t
+    assert any(l.startswith("PHOTO;ENCODING=b;TYPE=PNG:") for l in properties())
 
 
 def test_photo_folded_to_75_octets():
     """RFC 6350: lines over 75 octets must be folded with CRLF + single space,
-    or Apple Contacts truncates the photo."""
+    or Apple Contacts truncates the photo. Checks EVERY raw line, not just PHOTO —
+    X-SOCIALPROFILE is 90 octets unfolded."""
     for raw in VCF.read_bytes().split(b"\r\n"):
         assert len(raw) <= 75, f"unfolded line of {len(raw)} octets"
+
+
+def test_photo_decodes_to_a_real_png():
+    """The photo must be a valid PNG, not truncated base64.
+    Folding bugs corrupt this in a way every string assertion above would miss."""
+    import base64
+
+    line = next(l for l in properties() if l.startswith("PHOTO;"))
+    blob = base64.b64decode(line.split(":", 1)[1], validate=True)
+    assert blob[:8] == b"\x89PNG\r\n\x1a\n", "not a PNG"
+    assert len(blob) > 500, f"suspiciously small: {len(blob)} bytes"
 ```
 
-- [ ] **Step 4: Run it and watch it fail**
+- [ ] **Step 5: Run it and watch it fail**
 
 ```bash
 build/.venv/bin/python -m pytest tests/test_vcard.py -v
@@ -684,14 +822,15 @@ build/.venv/bin/python -m pytest tests/test_vcard.py -v
 
 Expected: FAIL — no `PHOTO` line.
 
-- [ ] **Step 5: Regenerate the vCard with a folded PHOTO**
+- [ ] **Step 6: Regenerate the vCard with a folded PHOTO**
 
 ```bash
 build/.venv/bin/python - <<'PY'
-import base64, textwrap
+import base64
 from pathlib import Path
 
 photo = base64.b64encode(Path("site/assets/icon-180.png").read_bytes()).decode()
+
 lines = [
     "BEGIN:VCARD",
     "VERSION:3.0",
@@ -701,29 +840,46 @@ lines = [
     "TITLE:AI Engineer",
     "EMAIL;type=INTERNET;type=WORK;type=pref:dhruv.bangera@parkertechnology.com",
     "URL;type=WORK:https://dhruvbangera.github.io",
-    "X-SOCIALPROFILE;type=linkedin:https://www.linkedin.com/in/dhruvbangera",
+    "X-SOCIALPROFILE;type=linkedin;x-user=dhruvbangera:https://www.linkedin.com/in/dhruvbangera",
+    "PHOTO;ENCODING=b;TYPE=PNG:" + photo,
+    "END:VCARD",
 ]
-# Fold: first line carries the property name, continuations get a single leading space.
-first = "PHOTO;ENCODING=b;TYPE=PNG:" + photo
-wrapped = textwrap.wrap(first, 74, drop_whitespace=False, break_long_words=True)
-lines.append(wrapped[0])
-lines.extend(" " + w for w in wrapped[1:])
-lines.append("END:VCARD")
 
-Path("site/dhruv.vcf").write_bytes(("\r\n".join(lines) + "\r\n").encode())
-print("vcf bytes:", Path("site/dhruv.vcf").stat().st_size)
+
+def fold(line):
+    """RFC 6350 folding: max 75 octets per line, continuations get one leading space.
+
+    Applies to EVERY long line, not just PHOTO. X-SOCIALPROFILE is 90 octets on its
+    own, and Apple Contacts can truncate unfolded lines. Content is pure ASCII here,
+    so slicing by character equals slicing by octet.
+    """
+    if len(line) <= 75:
+        return [line]
+    parts, rest = [line[:75]], line[75:]
+    while rest:
+        parts.append(" " + rest[:74])   # 1 space + 74 = 75 octets
+        rest = rest[74:]
+    return parts
+
+
+folded = [out for line in lines for out in fold(line)]
+Path("site/dhruv.vcf").write_bytes(("\r\n".join(folded) + "\r\n").encode())
+
+over = [l for l in folded if len(l.encode()) > 75]
+assert not over, "still over 75 octets: %r" % over[:1]
+print("vcf bytes:", Path("site/dhruv.vcf").stat().st_size, "| lines:", len(folded))
 PY
 ```
 
-- [ ] **Step 6: Run the full suite and watch it pass**
+- [ ] **Step 7: Run the full suite and watch it pass**
 
 ```bash
 build/.venv/bin/python -m pytest tests/ -v
 ```
 
-Expected: 18 passed. The no-phone and single-b guards must still pass.
+Expected: 19 passed. The no-phone and single-b guards must still pass.
 
-- [ ] **Step 7: Commit**
+- [ ] **Step 8: Commit**
 
 ```bash
 git add site/assets/icon-180.png site/dhruv.vcf tests/test_vcard.py
@@ -901,8 +1057,15 @@ by scaling CSS, avoiding a `deviceScaleFactor` that would require installing chr
 
 - [ ] **Step 2: Render with the Playwright MCP**
 
-`browser_resize` to 1206×2622 → `browser_navigate` to the absolute `file://` path of
-`build/shot.html` → `browser_take_screenshot` saving to `out/card@3x.png`.
+The local server from Task 6 must still be running (`python3 -m http.server 8137`).
+
+`browser_resize` to 1206×2622 → `browser_navigate` to
+`http://localhost:8137/build/shot.html` → `browser_take_screenshot` with
+`fullPage: true`, `scale: "device"`, and `filename` set to the **absolute** path
+`/Users/dhruvbangera/Desktop/Digital_Business_Card/out/card@3x.png`.
+
+Both constraints are verified, not assumed: the MCP blocks `file:` URLs, and a relative
+`filename` resolves against the browser's working directory (landing in the repo root).
 
 - [ ] **Step 3: Write the verification script**
 
@@ -1104,7 +1267,7 @@ the iPhone Action Button; recipient side is a GitHub Pages site with a vCard.
 build/.venv/bin/python -m pytest tests/ -v && build/.venv/bin/python build/verify.py
 ```
 
-Expected: 18 passed, then `PASS: QR decodes from the final render`.
+Expected: 19 passed, then `PASS: QR decodes from the final render`.
 
 - [ ] **Step 5: Commit and push**
 
@@ -1119,7 +1282,7 @@ git push origin main
 ## Definition of done
 
 **Verified on this machine:**
-- [ ] 18 tests pass
+- [ ] 19 tests pass
 - [ ] QR decodes to exactly `https://dhruvbangera.github.io` from the final 1206×2622 render
 - [ ] `https://dhruvbangera.github.io/` returns 200 over HTTPS
 - [ ] `dhruv.vcf` content-type recorded (`text/vcard` expected)
