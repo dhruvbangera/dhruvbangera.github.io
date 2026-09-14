@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Dhruv Bangera — AI Engineer, Parker Technology</title>
+<meta name="description" content="Dhruv Bangera, AI Engineer at Parker Technology.">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Dhruv Bangera">
+<meta name="theme-color" content="#ffffff">
+<link rel="apple-touch-icon" href="assets/icon-180.png">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="stylesheet" href="card.css">
+<style>
+  .wrap { max-width: 24rem; margin: 0 auto; padding: 1.5rem 1rem 3rem; }
+  .sheet { background:#fff; border-radius:1.25rem; overflow:hidden;
+           box-shadow:0 1px 2px rgba(11,12,12,.06), 0 12px 32px rgba(11,12,12,.08); }
+  .actions { border-top:1px solid var(--hairline); }
+  .action { display:flex; align-items:center; gap:.875rem; padding:1rem 1.25rem;
+            border-bottom:1px solid var(--hairline); text-decoration:none;
+            color:var(--ink); font-size:1rem; -webkit-tap-highlight-color:transparent; }
+  .action:last-child { border-bottom:0; }
+  .action:active { background:#f4f6f7; }
+  .action__icon { width:1.75rem; height:1.75rem; flex:0 0 auto; display:grid;
+                  place-items:center; border-radius:.5rem; background:var(--pt-teal);
+                  color:#fff; font-size:.9rem; font-weight:600; }
+  .action__icon--li { background:#0a66c2; }
+  .action__icon--save { background:var(--pt-slate); }
+  .action__chev { margin-left:auto; color:#b9c0c5; }
+  .hint { margin:1.25rem .25rem 0; font-size:.8125rem; line-height:1.5; color:var(--muted); }
+  .hint b { color:var(--ink); font-weight:600; }
+  @media (prefers-color-scheme: dark) {
+    body { background:#000; }
+    .hint { color:#8b949a; }
+  }
+</style>
+</head>
+<body>
+<main class="wrap">
+  <div class="sheet">
+    <article class="card">
+      <img class="card__wordmark" src="assets/parker-wordmark.svg" alt="Parker Technology">
+      <div class="card__identity">
+        <h1 class="card__name">Dhruv Bangera</h1>
+        <p class="card__title">AI Engineer</p>
+        <p class="card__company">Parker Technology</p>
+      </div>
+      <figure class="card__qr">
+        <img src="assets/qr.svg" alt="QR code linking to this page" width="160" height="160">
+        <figcaption class="card__scan">Scan to connect</figcaption>
+      </figure>
+    </article>
+
+    <nav class="actions">
+      <a class="action" href="dhruv.vcf">
+        <span class="action__icon action__icon--save">&#9679;</span>
+        Save to Contacts
+        <span class="action__chev">&rsaquo;</span>
+      </a>
+      <a class="action" href="mailto:dhruv.bangera@parkertechnology.com">
+        <span class="action__icon">&#9993;</span>
+        Email me
+        <span class="action__chev">&rsaquo;</span>
+      </a>
+      <a class="action" href="https://www.linkedin.com/in/dhruvbangera" target="_blank" rel="noopener">
+        <span class="action__icon action__icon--li">in</span>
+        Connect on LinkedIn
+        <span class="action__chev">&rsaquo;</span>
+      </a>
+    </nav>
+  </div>
+
+  <p class="hint" id="a2hs" hidden>
+    Keep this card: tap <b>Share</b>, then <b>Add to Home Screen</b>.
+  </p>
+</main>
+<script>
+  // Teach Add to Home Screen only on iOS Safari, and only when not already installed.
+  // iOS gives no programmatic install prompt, so this is the only available affordance.
+  (function () {
+    var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    var standalone = window.navigator.standalone === true ||
+      window.matchMedia('(display-mode: standalone)').matches;
+    if (isIOS && !standalone) document.getElementById('a2hs').hidden = false;
+  })();
+</script>
+</body>
+</html>
