@@ -1,0 +1,32 @@
+<!-- build/shot.html — screenshot harness for the offline card image.
+     Reuses site/card.css verbatim; defines NO sizes of its own.
+
+     iPhone 16 Pro is 402x874pt. Setting the root font-size to 3x (16 -> 48px)
+     and the canvas to 3x pixels means every rem in card.css scales exactly once,
+     so a 1x screenshot yields true @3x output. Overriding individual widths here
+     would double-scale them. -->
+<!doctype html>
+<html lang="en" class="shot">
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="../site/card.css">
+<style>
+  html { font-size: 48px; }                 /* 16px * 3 */
+  html, body { width: 1206px; height: 2622px; background: #fff; }
+</style>
+</head>
+<body>
+<article class="card">
+  <img class="card__wordmark" src="../site/assets/parker-wordmark.svg" alt="Parker Technology">
+  <div class="card__identity">
+    <h1 class="card__name">Dhruv Bangera</h1>
+    <p class="card__title">AI Engineer</p>
+    <p class="card__company">Parker Technology</p>
+  </div>
+  <figure class="card__qr">
+    <img src="../site/assets/qr.svg" alt="">
+    <figcaption class="card__scan">Scan to connect</figcaption>
+  </figure>
+</article>
+</body>
+</html>

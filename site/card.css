@@ -78,3 +78,7 @@ body {
 /* Full-bleed variant used only by the screenshot task. */
 .shot body { background: #fff; }
 .shot .card { max-width: none; min-height: 100vh; justify-content: center; gap: 2.5rem; }
+/* The offline image exists to be SCANNED across a table, not read on a screen.
+   Scan reliability off a glossy display depends heavily on apparent QR size, so
+   it gets more room here than it needs on the web card. */
+.shot .card__qr img { width: 14rem; height: 14rem; }

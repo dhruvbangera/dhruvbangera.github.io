@@ -14,24 +14,41 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="stylesheet" href="card.css">
 <style>
+  /* Follows the iOS Contacts contact-view idiom, not the Settings idiom:
+     circular tinted buttons with captions for ACTIONS, and label-over-value
+     rows for DATA. No chevrons anywhere — a chevron means "drills into another
+     screen", and none of these do. */
+
   .wrap { max-width: 24rem; margin: 0 auto; padding: 1.5rem 1rem 3rem; }
   .sheet { background:#fff; border-radius:1.25rem; overflow:hidden;
            box-shadow:0 1px 2px rgba(11,12,12,.06), 0 12px 32px rgba(11,12,12,.08); }
-  .actions { border-top:1px solid var(--hairline); }
-  .action { display:flex; align-items:center; gap:.875rem; padding:1rem 1.25rem;
-            border-bottom:1px solid var(--hairline); text-decoration:none;
-            color:var(--ink); font-size:1rem; -webkit-tap-highlight-color:transparent; }
-  .action:last-child { border-bottom:0; }
-  .action:active { background:#f4f6f7; }
-  .action__icon { width:1.75rem; height:1.75rem; flex:0 0 auto; display:grid;
-                  place-items:center; border-radius:.5rem; background:var(--pt-teal);
-                  color:#fff; font-size:.9rem; font-weight:600; }
-  .action__icon svg { width:1.05rem; height:1.05rem; display:block; }
-  .action__icon--li { background:#0a66c2; }
-  .action__icon--save { background:var(--pt-slate); }
-  .action__chev { margin-left:auto; color:#b9c0c5; }
+
+  /* --- Actions: circular tinted buttons, caption beneath --- */
+  .actions { display:flex; justify-content:center; gap:1.75rem;
+             padding:1.5rem 1rem 1.75rem; border-top:1px solid var(--hairline); }
+  .action { display:flex; flex-direction:column; align-items:center; gap:.5rem;
+            text-decoration:none; -webkit-tap-highlight-color:transparent; }
+  .action__btn { width:3.25rem; height:3.25rem; border-radius:50%;
+                 display:grid; place-items:center;
+                 background:rgba(2,81,114,.10); color:var(--pt-teal);
+                 transition:background .15s ease; }
+  .action:active .action__btn { background:rgba(2,81,114,.22); }
+  .action__btn svg { width:1.45rem; height:1.45rem; display:block; }
+  .action__label { font-size:.75rem; font-weight:400; color:var(--pt-teal); letter-spacing:0; }
+
+  /* --- Data: label over value, the Contacts row --- */
+  .fields { border-top:1px solid var(--hairline); }
+  .field { display:block; padding:.7rem 1.25rem; text-decoration:none;
+           border-bottom:1px solid var(--hairline); -webkit-tap-highlight-color:transparent; }
+  .field:last-child { border-bottom:0; }
+  .field:active { background:#f4f6f7; }
+  .field__label { display:block; font-size:.75rem; color:var(--muted); margin-bottom:.1rem; }
+  .field__value { display:block; font-size:.9375rem; color:var(--pt-teal);
+                  overflow-wrap:anywhere; }
+
   .hint { margin:1.25rem .25rem 0; font-size:.8125rem; line-height:1.5; color:var(--muted); }
   .hint b { color:var(--ink); font-weight:600; }
+
   @media (prefers-color-scheme: dark) {
     body { background:#000; }
     .hint { color:#8b949a; }
@@ -55,22 +72,49 @@
     </article>
 
     <nav class="actions">
-      <a class="action" href="dhruv.vcf">
-        <span class="action__icon action__icon--save"><svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><circle cx="8" cy="5.1" r="2.7"/><path d="M8 9.3c-2.8 0-5 1.7-5 3.8 0 .5.4.9.9.9h8.2c.5 0 .9-.4.9-.9 0-2.1-2.2-3.8-5-3.8z"/></svg></span>
-        Save to Contacts
-        <span class="action__chev">&rsaquo;</span>
-      </a>
       <a class="action" href="mailto:dhruv.bangera@parkertechnology.com">
-        <span class="action__icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="1.9" y="3.6" width="12.2" height="8.8" rx="1.7"/><path d="M2.6 4.8 8 8.9l5.4-4.1"/></svg></span>
-        Email me
-        <span class="action__chev">&rsaquo;</span>
+        <span class="action__btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
+               stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="2.5" y="5" width="19" height="14" rx="3"/>
+            <path d="M3.6 7.6 12 13.4l8.4-5.8"/>
+          </svg>
+        </span>
+        <span class="action__label">mail</span>
       </a>
+
       <a class="action" href="https://www.linkedin.com/in/dhruvbangera" target="_blank" rel="noopener">
-        <span class="action__icon action__icon--li">in</span>
-        Connect on LinkedIn
-        <span class="action__chev">&rsaquo;</span>
+        <span class="action__btn">
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <path d="M6.94 5.5a1.94 1.94 0 1 1-3.88 0 1.94 1.94 0 0 1 3.88 0zM3.4 8.9h3.1V21H3.4V8.9zm5.06 0h2.97v1.65h.04c.41-.78 1.42-1.6 2.93-1.6 3.13 0 3.71 2.06 3.71 4.74V21h-3.09v-5.66c0-1.35-.02-3.09-1.88-3.09-1.88 0-2.17 1.47-2.17 2.99V21H8.46V8.9z"/>
+          </svg>
+        </span>
+        <span class="action__label">linkedin</span>
+      </a>
+
+      <a class="action" href="dhruv.vcf">
+        <span class="action__btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
+               stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="9.6" cy="8.2" r="3.5"/>
+            <path d="M3 19.6c0-3.3 3-5.9 6.6-5.9 1.1 0 2.2.25 3.1.7"/>
+            <path d="M17.6 14.6v6.2M14.5 17.7h6.2"/>
+          </svg>
+        </span>
+        <span class="action__label">add contact</span>
       </a>
     </nav>
+
+    <div class="fields">
+      <a class="field" href="mailto:dhruv.bangera@parkertechnology.com">
+        <span class="field__label">email</span>
+        <span class="field__value">dhruv.bangera@parkertechnology.com</span>
+      </a>
+      <a class="field" href="https://www.linkedin.com/in/dhruvbangera" target="_blank" rel="noopener">
+        <span class="field__label">LinkedIn</span>
+        <span class="field__value">linkedin.com/in/dhruvbangera</span>
+      </a>
+    </div>
   </div>
 
   <p class="hint" id="a2hs" hidden>
