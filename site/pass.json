@@ -1,0 +1,35 @@
+{
+  "_comment": "PARKED, UNSIGNED. This is not a usable .pkpass. iOS validates a signature chained to an Apple-issued Pass Type ID certificate ($99/yr Developer Program); an unsigned pass is rejected silently. If Parker Technology turns out to hold a membership, fill in teamIdentifier, generate the cert, sign manifest.json with it plus the WWDR intermediate, and zip. No rebuild of anything else is needed.",
+  "formatVersion": 1,
+  "passTypeIdentifier": "pass.com.parkertechnology.businesscard",
+  "teamIdentifier": "REPLACE_WITH_TEAM_ID",
+  "organizationName": "Parker Technology",
+  "description": "Dhruv Bangera — AI Engineer",
+  "serialNumber": "dhruv-bangera-001",
+  "backgroundColor": "rgb(255,255,255)",
+  "foregroundColor": "rgb(11,12,12)",
+  "labelColor": "rgb(2,81,114)",
+  "logoText": "Parker Technology",
+  "barcodes": [
+    {
+      "format": "PKBarcodeFormatQR",
+      "message": "https://dhruvbangera.github.io",
+      "messageEncoding": "iso-8859-1"
+    }
+  ],
+  "generic": {
+    "primaryFields": [
+      { "key": "name", "label": "", "value": "Dhruv Bangera" }
+    ],
+    "secondaryFields": [
+      { "key": "title", "label": "TITLE", "value": "AI Engineer" }
+    ],
+    "auxiliaryFields": [
+      { "key": "company", "label": "COMPANY", "value": "Parker Technology" }
+    ],
+    "backFields": [
+      { "key": "email", "label": "Email", "value": "dhruv.bangera@parkertechnology.com" },
+      { "key": "linkedin", "label": "LinkedIn", "value": "https://www.linkedin.com/in/dhruvbangera" }
+    ]
+  }
+}
