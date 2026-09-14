@@ -714,10 +714,11 @@ Expected: FAIL — no `PHOTO` line.
 
 ```bash
 build/.venv/bin/python - <<'PY'
-import base64, textwrap
+import base64
 from pathlib import Path
 
 photo = base64.b64encode(Path("site/assets/icon-180.png").read_bytes()).decode()
+
 lines = [
     "BEGIN:VCARD",
     "VERSION:3.0",
@@ -728,16 +729,33 @@ lines = [
     "EMAIL;type=INTERNET;type=WORK;type=pref:dhruv.bangera@parkertechnology.com",
     "URL;type=WORK:https://dhruvbangera.github.io",
     "X-SOCIALPROFILE;type=linkedin;x-user=dhruvbangera:https://www.linkedin.com/in/dhruvbangera",
+    "PHOTO;ENCODING=b;TYPE=PNG:" + photo,
+    "END:VCARD",
 ]
-# Fold: first line carries the property name, continuations get a single leading space.
-first = "PHOTO;ENCODING=b;TYPE=PNG:" + photo
-wrapped = textwrap.wrap(first, 74, drop_whitespace=False, break_long_words=True)
-lines.append(wrapped[0])
-lines.extend(" " + w for w in wrapped[1:])
-lines.append("END:VCARD")
 
-Path("site/dhruv.vcf").write_bytes(("\r\n".join(lines) + "\r\n").encode())
-print("vcf bytes:", Path("site/dhruv.vcf").stat().st_size)
+
+def fold(line):
+    """RFC 6350 folding: max 75 octets per line, continuations get one leading space.
+
+    Applies to EVERY long line, not just PHOTO. X-SOCIALPROFILE is 90 octets on its
+    own, and Apple Contacts can truncate unfolded lines. Content is pure ASCII here,
+    so slicing by character equals slicing by octet.
+    """
+    if len(line) <= 75:
+        return [line]
+    parts, rest = [line[:75]], line[75:]
+    while rest:
+        parts.append(" " + rest[:74])   # 1 space + 74 = 75 octets
+        rest = rest[74:]
+    return parts
+
+
+folded = [out for line in lines for out in fold(line)]
+Path("site/dhruv.vcf").write_bytes(("\r\n".join(folded) + "\r\n").encode())
+
+over = [l for l in folded if len(l.encode()) > 75]
+assert not over, "still over 75 octets: %r" % over[:1]
+print("vcf bytes:", Path("site/dhruv.vcf").stat().st_size, "| lines:", len(folded))
 PY
 ```
 
