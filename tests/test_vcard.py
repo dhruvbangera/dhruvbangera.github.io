@@ -36,4 +36,5 @@ def test_no_phone_number_anywhere():
 
 def test_crlf_line_endings():
     """RFC 6350 requires CRLF. Some iOS versions reject LF-only vCards."""
-    assert b"\r\n" in VCF.read_bytes()
+    data = VCF.read_bytes()
+    assert data.replace(b"\r\n", b"").count(b"\n") == 0, "bare LF found"

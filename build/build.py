@@ -25,18 +25,22 @@ def main() -> None:
 
     # Wordmark: published reversed (white). Recolor white -> Parker teal for a white card.
     # Accents #6697a9 and #e3d71d are intentionally left alone.
-    wordmark = fetch(WORDMARK_SRC).replace("fill:#fff;", f"fill:{PT_TEAL};")
-    assert "fill:#fff" not in wordmark.replace(" ", ""), "recolor failed; upstream SVG changed"
+    src = fetch(WORDMARK_SRC)
+    assert src.count("fill:#fff;") == 1, "recolor failed; upstream SVG changed"
+    wordmark = src.replace("fill:#fff;", f"fill:{PT_TEAL};")
     (ASSETS / "parker-wordmark.svg").write_text(wordmark)
 
     # Square mark: already light-background colors. Used for apple-touch-icon + vCard PHOTO.
     (ASSETS / "parker-mark.svg").write_text(fetch(MARK_SRC))
 
     # QR, error correction H for glare/screen margin.
+    # border=4 is the spec-required quiet zone. Shared opts so the shipped SVG and
+    # the tested PNG can never drift in a way that makes the test lie.
     qr = segno.make(URL, error="h")
-    qr.save(ASSETS / "qr.svg", kind="svg", scale=10, dark=PT_TEAL, light=None, border=0)
+    qr_opts = dict(scale=10, dark=PT_TEAL, border=4)
+    qr.save(ASSETS / "qr.svg", kind="svg", light=None, **qr_opts)
     # PNG twin exists purely so tests can decode it.
-    qr.save(ASSETS / "qr-check.png", scale=10, dark=PT_TEAL, light="#ffffff", border=3)
+    qr.save(ASSETS / "qr-check.png", light="#ffffff", **qr_opts)
 
     print(f"assets written to {ASSETS}")
 
