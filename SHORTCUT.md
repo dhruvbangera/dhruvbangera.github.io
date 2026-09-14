@@ -55,6 +55,11 @@ check it. Do this before handing the card to anyone.
 - [ ] A second phone's Camera app scans the QR from your screen at arm's length
 - [ ] The QR opens `https://dhruvbangera.github.io` in **Safari**
 - [ ] **add contact** opens the native iOS Add Contact sheet
+      ← **test this first.** GitHub Pages serves the vCard as `text/x-vcard`,
+      not the modern `text/vcard`. iOS has long supported both, so this should
+      work, but it is unproven and Pages allows no custom headers to force the
+      modern type. If it downloads a file instead of offering Contacts, say so —
+      the fix is a different host, not a code change.
 - [ ] The saved contact shows the Parker mark as its photo
 - [ ] **mail** opens Mail with the address filled in
 - [ ] **linkedin** opens the LinkedIn app on the right profile —

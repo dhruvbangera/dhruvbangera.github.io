@@ -61,6 +61,11 @@ To re-render the card image (`out/card@3x.png`):
 - **Icons are inline SVG, not dingbat characters.** `&#9679;` and `&#9993;` render
   inconsistently across platforms. Do not "simplify" them back.
 
+- **GitHub Pages serves `dhruv.vcf` as `text/x-vcard`**, not `text/vcard`. Legacy
+  type, widely supported, but unverified on-device. Pages supports no custom
+  headers (`_headers` is a Netlify/Cloudflare feature), so this cannot be forced
+  without changing host.
+
 ## Not verified from this machine
 
 The Action Button firing, the Contacts sheet opening, the QR scanning off a real
