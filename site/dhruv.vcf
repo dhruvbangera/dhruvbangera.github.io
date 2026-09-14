@@ -1,0 +1,10 @@
+BEGIN:VCARD
+VERSION:3.0
+N:Bangera;Dhruv;;;
+FN:Dhruv Bangera
+ORG:Parker Technology
+TITLE:AI Engineer
+EMAIL;type=INTERNET;type=WORK;type=pref:dhruv.bangera@parkertechnology.com
+URL;type=WORK:https://dhruvbangera.github.io
+X-SOCIALPROFILE;type=linkedin:https://www.linkedin.com/in/dhruvbangera
+END:VCARD
