@@ -669,10 +669,17 @@ Write `out/icon.html` (`out/` is gitignored, so harnesses never pollute the repo
 
 ```html
 <!doctype html><meta charset="utf-8">
-<style>html,body{margin:0;width:180px;height:180px;background:#fff;}
-img{width:180px;height:180px;display:block;}</style>
+<style>
+ html,body{margin:0;width:180px;height:180px;background:#fff;
+           display:grid;place-items:center;overflow:hidden;}
+ /* 140 of 180 leaves ~22% breathing room so iOS's circular contact-photo crop
+    and squircle home-screen mask never clip the mark's corner elements. */
+ img{width:140px;height:140px;display:block;}
+</style>
 <img src="../site/assets/parker-mark.svg">
 ```
+
+Use `scale: "css"` on the screenshot — the canvas is already sized in real pixels.
 
 Then, using the Playwright MCP:
 `browser_resize` to 180×180 → `browser_navigate` to
@@ -686,30 +693,125 @@ way: it left a stray PNG at the repo root.
 
 - [ ] **Step 3: Verify dimensions**
 
+Pillow is **not** in the venv (it exists only in system Python), so use `cv2`, which
+is already a dependency:
+
 ```bash
 build/.venv/bin/python -c "
-from PIL import Image; im=Image.open('site/assets/icon-180.png'); print(im.size, im.mode)
-assert im.size==(180,180), im.size; print('OK')"
+import cv2, os
+im = cv2.imread('site/assets/icon-180.png', cv2.IMREAD_UNCHANGED)
+h, w = im.shape[:2]
+print(f'size: {w}x{h}  bytes: {os.path.getsize(\"site/assets/icon-180.png\")}')
+assert (w, h) == (180, 180), (w, h)
+print('OK')"
 ```
 
-Expected: `(180, 180) RGBA` then `OK`
+Expected: `size: 180x180  bytes: ~1900` then `OK`
 
 - [ ] **Step 4: Add the failing PHOTO test**
 
-Append to `tests/test_vcard.py`:
+**Rewrite** `tests/test_vcard.py` to the content below — this is a rewrite, not an
+append, because folding changes how the whole file must read the card.
+
+Folding splits long values across lines, so `"linkedin.com/in/dhruvbangera"` no longer
+appears as a contiguous string. An append-only version of this step leaves the single-b
+regression guard passing vacuously while no longer able to detect the typo. Likewise
+`"TEL" in text` can match by chance inside the base64 photo and fail for an unrelated
+reason. Both are fixed by reading unfolded property lines.
 
 ```python
+# tests/test_vcard.py
+from pathlib import Path
+
+VCF = Path(__file__).resolve().parents[1] / "site" / "dhruv.vcf"
+
+
+def unfolded() -> str:
+    """The vCard as a consumer sees it.
+
+    RFC 6350 folds long lines as CRLF + a single space, and readers rejoin them
+    before interpreting. Asserting against the raw bytes tests the wire format,
+    not the content — and silently breaks once a value crosses 75 octets.
+    """
+    return VCF.read_bytes().decode().replace("\r\n ", "")
+
+
+def properties() -> list[str]:
+    """Unfolded property lines, so a substring can't be matched inside base64."""
+    return [l for l in unfolded().split("\r\n") if l]
+
+
+def test_uses_vcard_3_for_ios_compatibility():
+    assert "VERSION:3.0" in properties()
+
+
+def test_required_identity_fields():
+    p = properties()
+    assert "FN:Dhruv Bangera" in p
+    assert "N:Bangera;Dhruv;;;" in p
+    assert "TITLE:AI Engineer" in p
+    assert "ORG:Parker Technology" in p
+
+
+def test_email_present():
+    assert any(
+        l.startswith("EMAIL") and l.endswith("dhruv.bangera@parkertechnology.com")
+        for l in properties()
+    )
+
+
+def test_linkedin_uses_single_b():
+    """Regression guard. Dhruv corrected dhruvbbangera -> dhruvbangera on 2026-09-14.
+    LinkedIn returns 999 for both spellings, so no network check can catch this —
+    only this assertion can.
+
+    Must read the UNFOLDED card: folding splits this URL mid-string, which made an
+    earlier version of this test silently stop matching.
+    """
+    t = unfolded()
+    assert "linkedin.com/in/dhruvbangera" in t
+    assert "dhruvbbangera" not in t, "double-b typo has regressed"
+
+
+def test_no_phone_number_anywhere():
+    """Explicit product decision: no phone. A QR in the wild cannot be retracted.
+
+    Checks property NAMES, not raw text — 'TEL' can occur by chance inside the
+    base64 photo, which would fail this test for an entirely unrelated reason.
+    """
+    offenders = [l for l in properties() if l.upper().startswith("TEL")]
+    assert not offenders, f"phone number present: {offenders}"
+
+
+def test_crlf_line_endings():
+    """RFC 6350 requires CRLF. Some iOS versions reject LF-only vCards.
+    Checks no BARE LF exists — `b"\\r\\n" in data` would pass on one CRLF + nine LFs."""
+    data = VCF.read_bytes()
+    assert data.replace(b"\r\n", b"").count(b"\n") == 0, "bare LF found"
+
+
 def test_photo_embedded_as_base64_png():
     """Parker mark appears as the contact photo in iOS Contacts."""
-    t = VCF.read_text()
-    assert "PHOTO;ENCODING=b;TYPE=PNG:" in t
+    assert any(l.startswith("PHOTO;ENCODING=b;TYPE=PNG:") for l in properties())
 
 
 def test_photo_folded_to_75_octets():
     """RFC 6350: lines over 75 octets must be folded with CRLF + single space,
-    or Apple Contacts truncates the photo."""
+    or Apple Contacts truncates the photo. Checks EVERY raw line, not just PHOTO —
+    X-SOCIALPROFILE is 90 octets unfolded."""
     for raw in VCF.read_bytes().split(b"\r\n"):
         assert len(raw) <= 75, f"unfolded line of {len(raw)} octets"
+
+
+def test_photo_decodes_to_a_real_png():
+    """The photo must be a valid PNG, not truncated base64.
+    Folding bugs corrupt this in a way every string assertion above would miss."""
+    import base64
+
+    line = next(l for l in properties() if l.startswith("PHOTO;"))
+    blob = base64.b64decode(line.split(":", 1)[1], validate=True)
+    assert blob[:8] == b"\x89PNG\r\n\x1a\n", "not a PNG"
+    assert len(blob) > 500, f"suspiciously small: {len(blob)} bytes"
 ```
 
 - [ ] **Step 5: Run it and watch it fail**
@@ -775,7 +877,7 @@ PY
 build/.venv/bin/python -m pytest tests/ -v
 ```
 
-Expected: 18 passed. The no-phone and single-b guards must still pass.
+Expected: 19 passed. The no-phone and single-b guards must still pass.
 
 - [ ] **Step 8: Commit**
 
@@ -1165,7 +1267,7 @@ the iPhone Action Button; recipient side is a GitHub Pages site with a vCard.
 build/.venv/bin/python -m pytest tests/ -v && build/.venv/bin/python build/verify.py
 ```
 
-Expected: 18 passed, then `PASS: QR decodes from the final render`.
+Expected: 19 passed, then `PASS: QR decodes from the final render`.
 
 - [ ] **Step 5: Commit and push**
 
@@ -1180,7 +1282,7 @@ git push origin main
 ## Definition of done
 
 **Verified on this machine:**
-- [ ] 18 tests pass
+- [ ] 19 tests pass
 - [ ] QR decodes to exactly `https://dhruvbangera.github.io` from the final 1206×2622 render
 - [ ] `https://dhruvbangera.github.io/` returns 200 over HTTPS
 - [ ] `dhruv.vcf` content-type recorded (`text/vcard` expected)
