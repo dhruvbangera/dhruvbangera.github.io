@@ -50,9 +50,13 @@
   .hint { margin:1.25rem .25rem 0; font-size:.8125rem; line-height:1.5; color:var(--muted); }
   .hint b { color:var(--ink); font-weight:600; }
 
+  /* The hint is the ONLY text outside the white sheet, so it is the only thing
+     that must flip with the colour scheme. Every --ink/--muted use inside .sheet
+     sits on white in both schemes and must NOT be flipped. */
   @media (prefers-color-scheme: dark) {
     body { background:#000; }
     .hint { color:#8b949a; }
+    .hint b { color:#f2f3f5; }   /* was inheriting --ink, near-black: invisible here */
   }
 </style>
 </head>
