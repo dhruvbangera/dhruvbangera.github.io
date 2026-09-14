@@ -670,8 +670,9 @@ Then, using the Playwright MCP:
 `filename` set to the **absolute** path
 `/Users/dhruvbangera/Desktop/Digital_Business_Card/site/assets/icon-180.png`.
 
-**The filename must be absolute.** A relative path silently writes into the MCP's own
-sandbox where it cannot be read back — verified.
+**The filename must be absolute.** A relative path resolves against the browser's own
+working directory — it lands in the repo root, not where you intend. Verified the hard
+way: it left a stray PNG at the repo root.
 
 - [ ] **Step 3: Verify dimensions**
 
@@ -933,8 +934,8 @@ The local server from Task 6 must still be running (`python3 -m http.server 8137
 `fullPage: true`, `scale: "device"`, and `filename` set to the **absolute** path
 `/Users/dhruvbangera/Desktop/Digital_Business_Card/out/card@3x.png`.
 
-Both constraints are verified, not assumed: the MCP blocks `file:` URLs, and a
-relative `filename` writes somewhere unreadable.
+Both constraints are verified, not assumed: the MCP blocks `file:` URLs, and a relative
+`filename` resolves against the browser's working directory (landing in the repo root).
 
 - [ ] **Step 3: Write the verification script**
 
