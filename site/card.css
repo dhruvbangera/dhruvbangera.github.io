@@ -1,0 +1,80 @@
+/* site/card.css — the single card component.
+   Rendered live on the page AND screenshotted for the offline image.
+   Never fork this file; both contexts must stay identical by construction. */
+
+:root {
+  --pt-teal: #025172;
+  --pt-slate: #6697a9;
+  --pt-yellow: #e3d71d;
+  --ink: #0b0b0c;
+  --muted: #5c6970;
+  --hairline: #e6e8ea;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: #f2f3f5;
+  /* -apple-system resolves to the real SF Pro on Apple devices. */
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+.card {
+  background: #fff;
+  width: 100%;
+  max-width: 24rem;
+  margin: 0 auto;
+  padding: 2.75rem 2rem 2.25rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 2rem;
+}
+
+.card__wordmark { width: 9.5rem; height: auto; display: block; }
+
+/* Traditional business-card hierarchy: name, then title, then company. */
+.card__identity { display: flex; flex-direction: column; gap: 0.3rem; }
+
+.card__name {
+  margin: 0;
+  font-size: 1.75rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+  line-height: 1.15;
+}
+
+.card__title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 500;
+  color: var(--pt-teal);
+  letter-spacing: 0.01em;
+}
+
+.card__company {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 400;
+  color: var(--muted);
+}
+
+.card__qr { margin: 0; display: flex; flex-direction: column; align-items: center; gap: 0.75rem; }
+.card__qr img { width: 10rem; height: 10rem; display: block; }
+
+.card__scan {
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* Full-bleed variant used only by the screenshot task. */
+.shot body { background: #fff; }
+.shot .card { max-width: none; min-height: 100vh; justify-content: center; gap: 2.5rem; }
