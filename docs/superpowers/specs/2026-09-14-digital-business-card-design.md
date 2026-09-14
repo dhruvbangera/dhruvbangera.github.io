@@ -153,23 +153,36 @@ GitHub repo **named** `dhruvbangera.github.io` (the repo name is what makes Page
 serve it at the root domain). The local folder name does not need to match.
 
 ```
-Digital_Business_Card/          → pushed to repo "dhruvbangera.github.io"
-├── index.html              card + actions, self-contained
-├── card.css                the one shared component
-├── dhruv.vcf               vCard 3.0, Parker mark embedded as PHOTO
-├── assets/
-│   ├── parker-logo.svg     recolored #fff → #025172
-│   ├── qr.svg              segno, error-correction H
-│   └── icon-180.png        apple-touch-icon
-├── manifest.webmanifest    Add to Home Screen
-├── pass.json               unsigned, parked
+Digital_Business_Card/               → pushed to repo "dhruvbangera.github.io"
+├── site/                            ← ONLY this dir is published
+│   ├── index.html                   card + 3 actions, self-contained
+│   ├── card.css                     the one shared component
+│   ├── dhruv.vcf                    vCard 3.0, Parker mark as PHOTO
+│   ├── manifest.webmanifest         Add to Home Screen
+│   ├── pass.json                    unsigned, parked
+│   └── assets/
+│       ├── parker-wordmark.svg      recolored #fff → #025172
+│       ├── parker-mark.svg          square 500x500, used as-is
+│       ├── qr.svg                   segno, error-correction H
+│       ├── qr-check.png             PNG twin, for the decode test
+│       └── icon-180.png             apple-touch-icon + vCard PHOTO
 ├── build/
-│   ├── build.py            recolor logo, generate QR
-│   └── shoot.js            Playwright → card@3x.png
-├── out/card@3x.png         the AirDrop artifact
-├── SHORTCUT.md             iPhone setup, ~60 seconds
-└── CLAUDE.md               constraints for future sessions
+│   ├── requirements.txt             pinned deps
+│   ├── build.py                     recolor logo, generate QR
+│   ├── shot.html                    screenshot harness, reuses card.css
+│   └── verify.py                    decode QR from the final render
+├── tests/
+│   ├── test_assets.py               logo recolor + QR decode
+│   ├── test_vcard.py                vCard, no-phone + single-b guards
+│   └── test_page.py                 required links present
+├── .github/workflows/pages.yml      deploys site/ only
+├── out/card@3x.png                  the AirDrop artifact (gitignored)
+├── SHORTCUT.md                      iPhone setup + on-device checklist
+└── CLAUDE.md                        constraints for future sessions
 ```
+
+`build/`, `tests/` and `docs/` are deliberately **not** published — the Pages workflow
+uploads `site/` only.
 
 ## Recipient actions, in priority order
 
@@ -189,10 +202,10 @@ Present: Pillow 11.3.0, npx, Playwright MCP.
 
 - `segno` — pure-Python QR, emits SVG directly, no native deps
 - `opencv-python-headless` — QR **decoding**, for verification
-- Playwright — rendering. **Primary path: the already-installed Playwright MCP**
-  (zero additional install). `build/shoot.js` is committed alongside it so the render
-  is reproducible without the MCP; running it standalone requires
-  `npx playwright install chromium`.
+- Playwright — rendering via the **already-installed Playwright MCP**. Verified: only
+  `mcp-chrome-*` builds exist in the Playwright cache, so `npx playwright install
+  chromium` (~150MB) is avoided. `build/shot.html` scales the card's CSS 3x so a 1x
+  screenshot yields true @3x pixels, removing any need for `deviceScaleFactor`.
 
 ## Verification
 
