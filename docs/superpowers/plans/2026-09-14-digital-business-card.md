@@ -116,7 +116,7 @@ white fill must become `#025172`. The square site icon needs no recolor.
 
 ```python
 # tests/test_assets.py
-import re, subprocess, sys
+import subprocess, sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -125,26 +125,27 @@ URL = "https://dhruvbangera.github.io"
 
 
 def build():
-    subprocess.run([str(ROOT / "build/.venv/bin/python"), str(ROOT / "build/build.py")],
-                   check=True, cwd=ROOT)
+    subprocess.run([sys.executable, str(ROOT / "build/build.py")], check=True, cwd=ROOT)
+
+
+# Build ONCE for the module. Calling it per-test made 8 HTTP requests per run and
+# made the QR test fail with a urllib traceback whenever Parker's CDN was down —
+# even though the QR assertion needs nothing but local segno.
+build()
 
 
 def test_wordmark_recolored_for_white_background():
-    build()
     svg = (ASSETS / "parker-wordmark.svg").read_text()
     assert "#025172" in svg, "wordmark must use Parker deep teal"
-    assert "fill:#fff" not in svg.replace(" ", ""), "white fill would be invisible on a white card"
 
 
 def test_wordmark_preserves_accent_colors():
-    build()
     svg = (ASSETS / "parker-wordmark.svg").read_text()
     assert "#6697a9" in svg, "slate accent must survive recolor"
     assert "#e3d71d" in svg, "yellow accent must survive recolor"
 
 
 def test_square_mark_is_untouched_and_square():
-    build()
     svg = (ASSETS / "parker-mark.svg").read_text()
     assert 'viewBox="0 0 500 500"' in svg, "mark must stay square for circular contact-photo crop"
     assert "#025172" in svg
@@ -154,7 +155,6 @@ def test_qr_decodes_to_exact_url():
     """The single most important test in this repo.
     A QR that scans to the wrong place is worse than no QR."""
     import cv2
-    build()
     png = ASSETS / "qr-check.png"
     got, _, _ = cv2.QRCodeDetector().detectAndDecode(cv2.imread(str(png)))
     assert got == URL, f"QR decoded to {got!r}, expected {URL!r}"
@@ -198,18 +198,26 @@ def main() -> None:
 
     # Wordmark: published reversed (white). Recolor white -> Parker teal for a white card.
     # Accents #6697a9 and #e3d71d are intentionally left alone.
-    wordmark = fetch(WORDMARK_SRC).replace("fill:#fff;", f"fill:{PT_TEAL};")
-    assert "fill:#fff" not in wordmark.replace(" ", ""), "recolor failed; upstream SVG changed"
+    # Positive check: asserting the ABSENCE of the old value after replacing it
+    # cannot tell "replaced" from "that spelling was never there" — so a Parker
+    # change to fill:#FFF; or fill:white; would silently ship a white-on-white logo.
+    src = fetch(WORDMARK_SRC)
+    assert src.count("fill:#fff;") == 1, "recolor failed; upstream SVG changed"
+    wordmark = src.replace("fill:#fff;", f"fill:{PT_TEAL};")
     (ASSETS / "parker-wordmark.svg").write_text(wordmark)
 
     # Square mark: already light-background colors. Used for apple-touch-icon + vCard PHOTO.
     (ASSETS / "parker-mark.svg").write_text(fetch(MARK_SRC))
 
     # QR, error correction H for glare/screen margin.
+    # border=4 is the spec-required quiet zone. VERIFIED: border=0 does not decode
+    # at all. Shared opts so the shipped SVG and the tested PNG cannot drift in the
+    # one dimension that decides whether the thing scans.
     qr = segno.make(URL, error="h")
-    qr.save(ASSETS / "qr.svg", kind="svg", scale=10, dark=PT_TEAL, light=None, border=0)
+    qr_opts = dict(scale=10, dark=PT_TEAL, border=4)
+    qr.save(ASSETS / "qr.svg", kind="svg", light=None, **qr_opts)
     # PNG twin exists purely so tests can decode it.
-    qr.save(ASSETS / "qr-check.png", scale=10, dark=PT_TEAL, light="#ffffff", border=3)
+    qr.save(ASSETS / "qr-check.png", light="#ffffff", **qr_opts)
 
     print(f"assets written to {ASSETS}")
 
@@ -285,8 +293,10 @@ def test_no_phone_number_anywhere():
 
 
 def test_crlf_line_endings():
-    """RFC 6350 requires CRLF. Some iOS versions reject LF-only vCards."""
-    assert b"\r\n" in VCF.read_bytes()
+    """RFC 6350 requires CRLF. Some iOS versions reject LF-only vCards.
+    Checks no BARE LF exists — `b"\r\n" in data` would pass on one CRLF + nine LFs."""
+    data = VCF.read_bytes()
+    assert data.replace(b"\r\n", b"").count(b"\n") == 0, "bare LF found"
 ```
 
 - [ ] **Step 2: Run it and watch it fail**
@@ -311,7 +321,7 @@ lines = [
     "TITLE:AI Engineer",
     "EMAIL;type=INTERNET;type=WORK;type=pref:dhruv.bangera@parkertechnology.com",
     "URL;type=WORK:https://dhruvbangera.github.io",
-    "X-SOCIALPROFILE;type=linkedin:https://www.linkedin.com/in/dhruvbangera",
+    "X-SOCIALPROFILE;type=linkedin;x-user=dhruvbangera:https://www.linkedin.com/in/dhruvbangera",
     "END:VCARD",
 ]
 Path("site/dhruv.vcf").write_bytes(("\r\n".join(lines) + "\r\n").encode("utf-8"))
@@ -716,7 +726,7 @@ lines = [
     "TITLE:AI Engineer",
     "EMAIL;type=INTERNET;type=WORK;type=pref:dhruv.bangera@parkertechnology.com",
     "URL;type=WORK:https://dhruvbangera.github.io",
-    "X-SOCIALPROFILE;type=linkedin:https://www.linkedin.com/in/dhruvbangera",
+    "X-SOCIALPROFILE;type=linkedin;x-user=dhruvbangera:https://www.linkedin.com/in/dhruvbangera",
 ]
 # Fold: first line carries the property name, continuations get a single leading space.
 first = "PHOTO;ENCODING=b;TYPE=PNG:" + photo
