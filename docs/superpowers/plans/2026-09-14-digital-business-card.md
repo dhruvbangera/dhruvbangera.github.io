@@ -632,23 +632,38 @@ iOS crops contact photos to a circle.
 **Files:**
 - Create: `site/assets/icon-180.png`; Modify: `site/dhruv.vcf`; Modify: `tests/test_vcard.py`
 
-- [ ] **Step 1: Render the icon with the Playwright MCP**
+- [ ] **Step 1: Start a local server**
 
-Write `/tmp/icon.html`:
+**The Playwright MCP blocks the `file:` protocol** — verified, it errors with
+"Access to file: protocol is blocked". Everything must be served over HTTP.
+
+```bash
+cd /Users/dhruvbangera/Desktop/Digital_Business_Card
+python3 -m http.server 8137 --bind 127.0.0.1 &
+sleep 1 && curl -s -o /dev/null -w 'server: %{http_code}\n' http://localhost:8137/site/index.html
+```
+
+- [ ] **Step 2: Render the icon with the Playwright MCP**
+
+Write `out/icon.html` (`out/` is gitignored, so harnesses never pollute the repo):
 
 ```html
 <!doctype html><meta charset="utf-8">
 <style>html,body{margin:0;width:180px;height:180px;background:#fff;}
 img{width:180px;height:180px;display:block;}</style>
-<img src="PARKER_MARK_ABS_PATH">
+<img src="../site/assets/parker-mark.svg">
 ```
 
-Replace `PARKER_MARK_ABS_PATH` with the absolute `file://` path to
-`site/assets/parker-mark.svg`. Then, using the Playwright MCP:
-`browser_resize` to 180×180 → `browser_navigate` to the file URL →
-`browser_take_screenshot` saving to `site/assets/icon-180.png`.
+Then, using the Playwright MCP:
+`browser_resize` to 180×180 → `browser_navigate` to
+`http://localhost:8137/out/icon.html` → `browser_take_screenshot` with
+`filename` set to the **absolute** path
+`/Users/dhruvbangera/Desktop/Digital_Business_Card/site/assets/icon-180.png`.
 
-- [ ] **Step 2: Verify dimensions**
+**The filename must be absolute.** A relative path silently writes into the MCP's own
+sandbox where it cannot be read back — verified.
+
+- [ ] **Step 3: Verify dimensions**
 
 ```bash
 build/.venv/bin/python -c "
@@ -658,7 +673,7 @@ assert im.size==(180,180), im.size; print('OK')"
 
 Expected: `(180, 180) RGBA` then `OK`
 
-- [ ] **Step 3: Add the failing PHOTO test**
+- [ ] **Step 4: Add the failing PHOTO test**
 
 Append to `tests/test_vcard.py`:
 
@@ -676,7 +691,7 @@ def test_photo_folded_to_75_octets():
         assert len(raw) <= 75, f"unfolded line of {len(raw)} octets"
 ```
 
-- [ ] **Step 4: Run it and watch it fail**
+- [ ] **Step 5: Run it and watch it fail**
 
 ```bash
 build/.venv/bin/python -m pytest tests/test_vcard.py -v
@@ -684,7 +699,7 @@ build/.venv/bin/python -m pytest tests/test_vcard.py -v
 
 Expected: FAIL — no `PHOTO` line.
 
-- [ ] **Step 5: Regenerate the vCard with a folded PHOTO**
+- [ ] **Step 6: Regenerate the vCard with a folded PHOTO**
 
 ```bash
 build/.venv/bin/python - <<'PY'
@@ -715,7 +730,7 @@ print("vcf bytes:", Path("site/dhruv.vcf").stat().st_size)
 PY
 ```
 
-- [ ] **Step 6: Run the full suite and watch it pass**
+- [ ] **Step 7: Run the full suite and watch it pass**
 
 ```bash
 build/.venv/bin/python -m pytest tests/ -v
@@ -723,7 +738,7 @@ build/.venv/bin/python -m pytest tests/ -v
 
 Expected: 18 passed. The no-phone and single-b guards must still pass.
 
-- [ ] **Step 7: Commit**
+- [ ] **Step 8: Commit**
 
 ```bash
 git add site/assets/icon-180.png site/dhruv.vcf tests/test_vcard.py
@@ -901,8 +916,15 @@ by scaling CSS, avoiding a `deviceScaleFactor` that would require installing chr
 
 - [ ] **Step 2: Render with the Playwright MCP**
 
-`browser_resize` to 1206×2622 → `browser_navigate` to the absolute `file://` path of
-`build/shot.html` → `browser_take_screenshot` saving to `out/card@3x.png`.
+The local server from Task 6 must still be running (`python3 -m http.server 8137`).
+
+`browser_resize` to 1206×2622 → `browser_navigate` to
+`http://localhost:8137/build/shot.html` → `browser_take_screenshot` with
+`fullPage: true`, `scale: "device"`, and `filename` set to the **absolute** path
+`/Users/dhruvbangera/Desktop/Digital_Business_Card/out/card@3x.png`.
+
+Both constraints are verified, not assumed: the MCP blocks `file:` URLs, and a
+relative `filename` writes somewhere unreadable.
 
 - [ ] **Step 3: Write the verification script**
 
