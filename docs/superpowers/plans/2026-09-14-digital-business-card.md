@@ -517,6 +517,7 @@ Expected: FAIL — `site/index.html` does not exist.
 <title>Dhruv Bangera — AI Engineer, Parker Technology</title>
 <meta name="description" content="Dhruv Bangera, AI Engineer at Parker Technology.">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Dhruv Bangera">
 <meta name="theme-color" content="#ffffff">
@@ -536,6 +537,7 @@ Expected: FAIL — `site/index.html` does not exist.
   .action__icon { width:1.75rem; height:1.75rem; flex:0 0 auto; display:grid;
                   place-items:center; border-radius:.5rem; background:var(--pt-teal);
                   color:#fff; font-size:.9rem; font-weight:600; }
+  .action__icon svg { width:1.05rem; height:1.05rem; display:block; }
   .action__icon--li { background:#0a66c2; }
   .action__icon--save { background:var(--pt-slate); }
   .action__chev { margin-left:auto; color:#b9c0c5; }
@@ -565,12 +567,12 @@ Expected: FAIL — `site/index.html` does not exist.
 
     <nav class="actions">
       <a class="action" href="dhruv.vcf">
-        <span class="action__icon action__icon--save">&#9679;</span>
+        <span class="action__icon action__icon--save"><svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><circle cx="8" cy="5.1" r="2.7"/><path d="M8 9.3c-2.8 0-5 1.7-5 3.8 0 .5.4.9.9.9h8.2c.5 0 .9-.4.9-.9 0-2.1-2.2-3.8-5-3.8z"/></svg></span>
         Save to Contacts
         <span class="action__chev">&rsaquo;</span>
       </a>
       <a class="action" href="mailto:dhruv.bangera@parkertechnology.com">
-        <span class="action__icon">&#9993;</span>
+        <span class="action__icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="1.9" y="3.6" width="12.2" height="8.8" rx="1.7"/><path d="M2.6 4.8 8 8.9l5.4-4.1"/></svg></span>
         Email me
         <span class="action__chev">&rsaquo;</span>
       </a>
@@ -599,6 +601,14 @@ Expected: FAIL — `site/index.html` does not exist.
 </body>
 </html>
 ```
+
+**On the icons:** these are inline SVG, not dingbat characters. `&#9679;` and `&#9993;`
+render inconsistently across platforms — the circle reads as a meaningless blob and the
+envelope as a cramped box — which undercuts the native-Apple feel. Verified visually in a
+browser. Do not "simplify" these back to glyphs.
+
+**On the meta tags:** `apple-mobile-web-app-capable` is deprecated and browsers warn about
+it, but Apple still honours it, so BOTH it and the standard `mobile-web-app-capable` ship.
 
 - [ ] **Step 4: Write the manifest**
 
