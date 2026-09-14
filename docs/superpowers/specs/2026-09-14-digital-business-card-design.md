@@ -119,12 +119,15 @@ which resolves to **SF Pro** on Apple devices — the real system font.
 | Title | AI Engineer |
 | Company | Parker Technology |
 | Email | dhruv.bangera@parkertechnology.com |
-| LinkedIn | https://www.linkedin.com/in/dhruvbbangera |
+| LinkedIn | https://www.linkedin.com/in/dhruvbangera |
 | Card URL | https://dhruvbangera.github.io |
 | Phone | *(omitted by decision)* |
 
-LinkedIn returns HTTP **999** (LinkedIn's bot-block), not 404 — plausible but
-**not machine-verifiable**. Must be confirmed by tapping the live link on a real device.
+LinkedIn handle corrected by Dhruv on 2026-09-14 from `dhruvbbangera` to
+`dhruvbangera` (single b). LinkedIn returns HTTP **999** (its bot-block) rather than
+404 for both spellings, so the URL is **not machine-verifiable from here** — a wrong
+handle would have looked identical to a right one. Confirm by tapping the live link
+on a real device before handing the card to anyone.
 
 ## Hosting
 
